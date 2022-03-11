@@ -72,7 +72,14 @@ Tan_PCA_scores
 
 Tan.dist <- bitwise.dist(Tan_LDprune.genlight)
 
-Tan.tree <- aboot(Tan_LDprune.genlight, tree = "upgma", distance = bitwise.dist, sample = 100, showtree = F, cutoff = 50, quiet = T)
+Tan.tree <- aboot(Tan_LDprune.genlight, tree = "upgma", distance = bitwise.dist, sample = 100, showtree = F, cutoff = 0, quiet = T)
+
+write.tree(Tan.tree,file="Tan.tre")
+tree<-read.tree("Tan.tre")
+library(phytools)
+plot(tree)
+
+
 
 
 plot.phylo(Tan.tree, cex = 0.8, font = 2, adj = 0, tip.color = cols[pop(Tan_LDprune.genlight)])
@@ -84,6 +91,8 @@ plot.phylo(Tan.tree, cex = 0.8, font = 2, adj = 0, tip.color = cols[pop(Tan_LDpr
 ##########################################################################################
 # Genetic Summary Statistics:
 library("hierfstat")
+  
+popmap <- read.table("popmap.layers", header = F)
 
 Tan_LDprune.genid <- vcfR2genind(Tan_LDprune)
 
@@ -93,7 +102,21 @@ pop(Tan_LDprune.genid) <- popmap$V2
 
 tan.bs <- basic.stats(Tan_LDprune.genid)
 
-tan.bs$overall
+tan.bs$perloc[,7]
+
+Observed_perloc_fst <- as.data.frame(tan.bs$perloc[,7])
+names(Observed_perloc_fst)[1] <- "fst"
+
+#mutate with outlier status: check Simulated for threshold:
+
+Observed_perloc_fst <- Observed_perloc_fst %>% mutate(outlier = ifelse(fst > threshold, "outlier", "background"))
+
+Observed_perloc_fst$index <- 1:nrow(Observed_perloc_fst)
+outliers = subset(Observed_perloc_fst, Observed_perloc_fst$outlier == "outlier")
+
+#Write the outlier SNPs to a file.
+write.table(outliers, "Fst_outliers_snps.txt", append = F, sep = "\t", dec = ".", row.names = F, col.names = T)
+
 
 #Per Locus Fst Plot:
 PerLocFst <- ggplot(tan.bs$perloc, aes(x=Fst)) + 
@@ -101,9 +124,22 @@ PerLocFst <- ggplot(tan.bs$perloc, aes(x=Fst)) +
   ylab("Number of Sites")+
   xlab("Site-wise Weir and Cockerham Fst")+
   theme_bw()+
-  geom_vline(xintercept = 0.0272, color = "red")
+  ggtitle("Observed Site-wise Fst")+
+  geom_vline(xintercept = as.numeric(tan.bs$overall[7]), color = "red")
 
 PerLocFst
+
+#Per Locus Fis Plot:
+PerLocFis <- ggplot(tan.bs$perloc, aes(x=Fis)) + 
+  geom_histogram(color="blue", fill="lightblue", binwidth=0.02)+
+  ylab("Number of Sites")+
+  xlab("Site-wise Weir and Cockerham Fis")+
+  theme_bw()+
+  ggtitle("Observed Site-wise Fis")+
+  geom_vline(xintercept = as.numeric(tan.bs$overall[9]), color = "red")
+
+PerLocFis
+
 
 #Overall Genetic Distance as table:
 library("reshape2")
