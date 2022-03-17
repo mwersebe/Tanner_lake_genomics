@@ -109,12 +109,41 @@ names(Observed_perloc_fst)[1] <- "fst"
 
 #mutate with outlier status: check Simulated for threshold:
 
-Observed_perloc_fst <- Observed_perloc_fst %>% mutate(outlier = ifelse(fst > threshold, "outlier", "background"))
+Observed_perloc_fst <- Observed_perloc_fst %>% mutate(outlier_99 = ifelse(fst > threshold, "outlier", "background"))
 
 Observed_perloc_fst$index <- 1:nrow(Observed_perloc_fst)
-outliers = subset(Observed_perloc_fst, Observed_perloc_fst$outlier == "outlier")
 
-#Write the outlier SNPs to a file.
+
+# calculate P values for each Fst value in the observed data set
+
+pvalue<- vector(mode = "numeric", length = length(Observed_perloc_fst[,1]))
+
+for (i in 1:length(Observed_perloc_fst[,1])){
+  
+  pvalue[i] <- (sum(perloc_fst[,1] >= Observed_perloc_fst[i,1], na.rm =T)/115800)
+  
+}
+
+Observed_perloc_fst <- cbind.data.frame(Observed_perloc_fst, pvalue)
+
+head(Observed_perloc_fst)
+
+# Adjust P values for multiple comparisons:
+
+adjust_fdr = p.adjust(Observed_perloc_fst[,4], method = "fdr", n = length(Observed_perloc_fst[,1]))
+
+adjust_bonf = p.adjust(Observed_perloc_fst[,4], method = "bonferroni", n = length(Observed_perloc_fst[,1]))
+
+Observed_perloc_fst <- cbind.data.frame(Observed_perloc_fst, adjust_fdr, adjust_bonf)
+
+head(Observed_perloc_fst)
+
+subset(Observed_perloc_fst, Observed_perloc_fst$adjust_fdr <= 0.01)
+
+
+#Write the outlier SNPs to a file. Not run.
+
+outliers = subset(Observed_perloc_fst, Observed_perloc_fst$adjust_fdr <= 0.01)
 write.table(outliers, "Fst_outliers_snps.txt", append = F, sep = "\t", dec = ".", row.names = F, col.names = T)
 
 
