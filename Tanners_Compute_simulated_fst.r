@@ -91,8 +91,9 @@ perloc_fst <- data.frame(unlist(x = perloc_fst))
  
 perloc_fst %>%
    arrange(desc(fst)) %>%
-   slice(1:10)
- 
+   slice(1:100)
+
+
 # Annotate the status of the Fst measures; greater than 99th percentile:
 
 threshold <- quantile(perloc_fst$fst,0.995, na.rm = T)
@@ -112,7 +113,7 @@ ggplot(perloc_fst, aes(x=fst)) +
   ggtitle("Simulated Site-wise Fst Distribution")+
   geom_vline(xintercept = mean(perloc_fst[,1], na.rm = T), color = "red")
 
-ggplot(sim.bs$perloc, aes(x=Fis)) + 
+ggplot(perloc, aes(x=Fis)) + 
   geom_histogram(color="blue", fill="lightblue", binwidth=0.02)+
   ylab("Number of Sites")+
   xlab("Site-wise Weir and Cockerham Fis")+

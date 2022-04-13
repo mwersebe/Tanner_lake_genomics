@@ -68,26 +68,6 @@ Tan_PCA_scores
 
 #Tan 22-24 02A and 04B clustering with younger clones. Tan 16-18 10A loadings similar to younger clones.
 
-# Genetic Distance Tree:
-
-Tan.dist <- bitwise.dist(Tan_LDprune.genlight)
-
-Tan.tree <- aboot(Tan_LDprune.genlight, tree = "upgma", distance = bitwise.dist, sample = 100, showtree = F, cutoff = 0, quiet = T)
-
-write.tree(Tan.tree,file="Tan.tre")
-tree<-read.tree("Tan.tre")
-library(phytools)
-plot(tree)
-
-
-
-
-plot.phylo(Tan.tree, cex = 0.8, font = 2, adj = 0, tip.color = cols[pop(Tan_LDprune.genlight)])
-  nodelabels(Tan.tree$node.label, adj = c(1.3, -0.5), frame = "n", cex = 0.8,font = 2, xpd = TRUE) 
-  legend('topleft', legend = c("10-12","16-18","18-20", "2-4", "22-24", "6-8", "LC"), fill = cols, border = FALSE, bty = "n", cex = 1.0) 
-  axis(side = 1) 
-  title(xlab = "Genetic distance (proportion of loci that are different)")
-
 ##########################################################################################
 # Genetic Summary Statistics:
 library("hierfstat")
@@ -143,8 +123,8 @@ subset(Observed_perloc_fst, Observed_perloc_fst$adjust_fdr <= 0.01)
 
 #Write the outlier SNPs to a file. Not run.
 
-outliers = subset(Observed_perloc_fst, Observed_perloc_fst$adjust_fdr <= 0.01)
-write.table(outliers, "Fst_outliers_snps.txt", append = F, sep = "\t", dec = ".", row.names = F, col.names = T)
+#outliers = subset(Observed_perloc_fst, Observed_perloc_fst$adjust_fdr <= 0.01)
+#write.table(outliers, "Fst_outliers_snps.txt", append = F, sep = "\t", dec = ".", row.names = F, col.names = T)
 
 
 #Per Locus Fst Plot:
@@ -197,107 +177,4 @@ gendist <- ggplot(tan.gendist, aes(Var1, Var2)) + # x and y axes => Var1 and Var
 
 gendist
 
-
-
-##########################################################################################
-library(dplyr)
-library(readr)
-library(tidyr)
-library(purrr)
-library(magrittr)
-library(hablar)
-#Tanners Temporal Allele Frequency Changes:
-
-#Using the intronic LD pruned datat set, extracted Tan 22-24 'polymorphic' SNPs.
-#Polymorphic being anything that had a frequency of >= doubleton (i.e., excluding all singletons)
-#Extracted these SNPs from with AF and MAF from 10-12 and Lake Clones (0) subpops as well.
-
-AlleleFreqs <- read_tsv("Tanners_polymorphic.tsv", col_names = T)
-head(AlleleFreqs)
-
-AlleleFreqs %>% pivot_longer(cols = c("NumberSamples_22": "MAF_0"), names_to = c("Measure","Population"), names_sep = "_", values_to = "Count") %>%
-  pivot_wider(names_from = "Measure", values_from = "Count") -> AlleleFreqs
-  
-
-AlleleFreqs
-
-# If the value of MAF = AlleleFreq, ALT is the minor allele (MA)
-# If the value of MAF < AlleleFreq, REF is the minor allele (MA)
-# Write code to standardize the Freq of the ALT allele. 
-
-AlleleFreqs %>% mutate(ALT_freq = if_else(AlleleFreq > MAF, AlleleFreq, MAF)) -> AlleleFreqs
-AlleleFreqs
-
-# Group the data by starting ALT_freq 
-# Bins: SAF >= 0.140 -0.25; >0.25 - 0.5, >0.5 -0.75, >0.75
-
-
-Starting <- AlleleFreqs %>% filter(Population == "22") %>% select(ALT_freq) %>% sapply(as.numeric) %>% as.vector
-
-Starting_Freq <- rep(Starting, each = 7)
-
-AlleleFreqs <- AlleleFreqs %>% mutate(Starting_Freq)
-AlleleFreqs <- AlleleFreqs %>% convert(num(Population))
-
-LowFreqAlleles <- AlleleFreqs %>% group_by(Starting_Freq >= 0.14 & Starting_Freq < 0.25) %>% filter(`Starting_Freq >= 0.14 & Starting_Freq < 0.25` == "TRUE") %>% convert(num(Population))
-
-MedFreqAlleles <- AlleleFreqs %>% group_by(Starting_Freq >= 0.25 & Starting_Freq < 0.5) %>% filter(`Starting_Freq >= 0.25 & Starting_Freq < 0.5` == "TRUE") %>% convert(num(Population))
-
-MedHighFreqAlleles <- AlleleFreqs %>% group_by(Starting_Freq >= 0.5 & Starting_Freq < 0.75) %>% filter(`Starting_Freq >= 0.5 & Starting_Freq < 0.75` == "TRUE") %>% convert(num(Population))
-
-HighFreqAlleles <- AlleleFreqs %>% group_by(Starting_Freq >= 0.75 & Starting_Freq <= 1.0) %>% filter(`Starting_Freq >= 0.75 & Starting_Freq <= 1` == "TRUE") %>% convert(num(Population))
-
-# Plot ALT Allele Frequency over time usings spaghetti plots. Facet Wrap per chromosome.
-
-
-ggplot(AlleleFreqs, aes(x = Population, y = ALT_freq, group = BasePair))+
-  geom_line()+
-  scale_x_reverse()+
-  facet_wrap(vars(`#CHROM`))+
-  ggtitle("Allele Frequency Change Over Time")
-
-ggplot(LowFreqAlleles, aes(x = Population, y = ALT_freq, group = BasePair))+
-  geom_line()+
-  scale_x_reverse()+
-  facet_wrap(vars(`#CHROM`))+
-  ggtitle("Low Starting Frequency")
-
-ggplot(MedFreqAlleles, aes(x = Population, y = ALT_freq, group = BasePair))+
-  geom_line()+
-  scale_x_reverse()+
-  facet_wrap(vars(`#CHROM`))+
-  ggtitle("Medium Starting Frequency")
-
-ggplot(MedHighFreqAlleles, aes(x = Population, y = ALT_freq, group = BasePair))+
-  geom_line()+
-  scale_x_reverse()+
-  facet_wrap(vars(`#CHROM`))+
-  ggtitle("Medium-High Starting Frequency")
-
-ggplot(HighFreqAlleles, aes(x = Population, y = ALT_freq, group = BasePair))+
-  geom_line()+
-  scale_x_reverse()+
-  facet_wrap(vars(`#CHROM`))+
-  ggtitle("High Starting Frequency")
-
-###############################################################################
-
-# Plot by allele type: Doubletons, tripletons, etc. 
-
-Doubletons <- AlleleFreqs %>% group_by(Starting_Freq >= 0.14 & Starting_Freq < 0.17) %>% filter(`Starting_Freq >= 0.14 & Starting_Freq < 0.17` == "TRUE") %>% convert(num(Population))
-
-ggplot(Doubletons, aes(x = Population, y = ALT_freq, group = BasePair))+
-  geom_line()+
-  scale_x_reverse()+
-  facet_wrap(vars(`#CHROM`))+
-  ggtitle("Allele Trajectory for Doubletons")
-
-
-Tripletons <- AlleleFreqs %>% group_by(Starting_Freq >= 0.21 & Starting_Freq <= 0.25) %>% filter(`Starting_Freq >= 0.21 & Starting_Freq <= 0.25` == "TRUE")
-
-ggplot(Tripletons, aes(x = Population, y = ALT_freq, group = BasePair))+
-  geom_line()+
-  scale_x_discrete(limits = rev)+
-  facet_wrap(vars(`#CHROM`))+
-  ggtitle("Allele Trajectory for Tripletons")
 
