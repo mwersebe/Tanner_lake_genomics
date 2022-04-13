@@ -32,27 +32,12 @@ plink --vcf Tanners_CHRall_filter_BiSnps_intron.vcf.gz --allow-extra-chr --set-m
 
 #Move vcf file into R for PCA analysis:
 
-#see script. 
+# grab the allele freqs in each temporal pop: SUB in TOP/MID for each:
 
-#Filter VCF for alleles that change in frequency:
+bcftools view -S DEEP_samples.txt Tanners_CHRall_filter_BiSnps_LDprune_nomiss.vcf.gz|bcftools +fill-tags|bcftools view -H|while read line; do echo $line|awk -F "\ " '{print$1"\t"$2"\t"$4"\t"$5}' |tr "\n" "\t"; echo $line|awk -F ";" '{print$3"\t"$5"\t"$6}'; done |sed -e "s/AN=//g"|sed -e "s/AF=//g"|sed -e "s/M//g" > DEEP_allele_freqs.tsv
 
-bcftools view -H Tanners_22-24_snps.vcf.gz -Ov|while read line; do echo $line|awk -F "\ " '{print$1"\t"$2"\t"$4"\t"$5}' |tr "\n" "\t"; echo $line|awk -F ";" '{print$3"\t"$5"\t"$6}'; done > Tan_22-24_alleleFreqs.tsv
+cut -f 6,7 {POP}_allele_freqs.tsv > {POP}.temp
 
-#use sed to remove the AF=, MAF= and AN=
-
-#Filter to polymorphic SNPs in 20-22 cm pop:
-
-awk '{if ($6 >=0.142 && $6 <= 1.0) print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7}' Tan_22-24_alleleFreqs.tsv > Tan_22-24_polymorphic.tsv
-
-#make the first column Grep-able 
-
-sed -e 's/^1/CHR01/g' Tan_22-24_polymorphic.tsv|sed -e 's/^2/CHR02/g' |sed -e 's/^3/CHR03/g'|sed -e 's/^4/CHR04/g'|sed -e 's/^5/CHR05/g'|sed -e 's/^6/CHR06/g'|sed -e 's/^7/CHR07/g'|sed -e 's/^8/CHR08/g'|sed -e 's/^9/CHR09/g'|sed -e 's/^10/CHR10/g'|sed -e 's/^11/CHR11/g'|sed -e 's/^12/CHR12/g' > temp
-
-
-#Search for the same snps in the other files:
-
-cat Tan_22-24_polymorphic.tsv |awk -F "\t" '{print$1" "$2}' |while read chr basepair; do grep "$chr" Tan_LC_alleleFreqs.tsv |grep -w "$basepair"|awk -F "\t" '{print$5"\t"$6"\t"$7}';done > Tan_LC_polymorphic.tsv &
-
-paste -d "\t" Tan_22-24_polymorphic.tsv Tan_10-12_polymorphic.tsv Tan_LC_polymorphic.tsv > Tanners_polymorphic.tsv
+paste -d "\t" DEEP_allele_freqs.tsv {POP}.temp > All_allele_freqs.tsv
 
 
