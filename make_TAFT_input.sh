@@ -14,16 +14,16 @@ cut -f 1 TOP_allele_counts.txt|head|while read line
 do 
 echo "${line}_Nr_alleles"|tr "\n" "\t"
 echo "2"
-grep "$line" DEEP_allele_counts.txt|tr "\n" "\t"
-variable=$(grep "$line" DEEP_allele_counts.txt|awk -F "\t" '{print$2}')
+grep -w "$line" DEEP_allele_counts.txt|tr "\n" "\t"
+variable=$(grep -w "$line" DEEP_allele_counts.txt|awk -F "\t" '{print$2}')
 let "result = 36 - $variable"
 echo $result
-grep "$line" MID_allele_counts.txt|tr "\n" "\t"
-variable=$(grep "$line" MID_allele_counts.txt|awk -F "\t" '{print$2}')
+grep -w "$line" MID_allele_counts.txt|tr "\n" "\t"
+variable=$(grep -w "$line" MID_allele_counts.txt|awk -F "\t" '{print$2}')
 let "result = 36 - $variable"
 echo $result
-grep "$line" TOP_allele_counts.txt|tr "\n" "\t"
-variable=$(grep "$line" TOP_allele_counts.txt|awk -F "\t" '{print$2}')
+grep -w "$line" TOP_allele_counts.txt|tr "\n" "\t"
+variable=$(grep -w "$line" TOP_allele_counts.txt|awk -F "\t" '{print$2}')
 let "result = 36 - $variable"
 echo $result
 done > temporal.counts
