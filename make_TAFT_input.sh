@@ -26,4 +26,12 @@ grep "$line" TOP_allele_counts.txt|tr "\n" "\t"
 variable=$(grep "$line" TOP_allele_counts.txt|awk -F "\t" '{print$2}')
 let "result = 36 - $variable"
 echo $result
-done
+done > temporal.counts
+
+# Put the header on the data frame:
+
+cat input.header temporal.counts > info.dat 
+
+# ./TAFT info.dat
+
+# Happy
