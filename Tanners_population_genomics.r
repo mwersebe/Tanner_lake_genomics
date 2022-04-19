@@ -3,7 +3,6 @@
 #Tanners Lake Genomics Data Analysis:
 #Jan 30, 2022
 ################################################################################
-
 # load required libraries
 library("adegenet")
 library("tidyr")
@@ -25,7 +24,7 @@ popmap <- read.table("pop.map", header = F)
 head(popmap)
 
 all(colnames(Tan_LDprune@gt)[-1] == popmap$V1)
- #should return TRUE
+#should return TRUE
 
 Tan_LDprune.genlight <- vcfR2genlight(Tan_LDprune)
 
@@ -60,7 +59,9 @@ PCA_plot <- ggplot(Tan_PCA_scores, aes(x=PC1, y=PC2, colour = pop))+
   scale_color_manual(values = cols)+
   xlab("PC1 (7.6%)")+
   ylab("PC2 (4.64%)")+
-  theme_bw()
+  theme_light()+
+  theme(text = element_text(size = 15))+
+  labs(color = " Temporal \n Subpopulation")
 
 PCA_plot
 
@@ -108,6 +109,19 @@ Observed_perloc_fst <- cbind.data.frame(Observed_perloc_fst, pvalue)
 
 head(Observed_perloc_fst)
 
+#Fix the INF problem with multiple correction:
+Observed_perloc_fst[7229,4] <- 0.00000001
+Observed_perloc_fst[7783,4] <- 0.00000001
+Observed_perloc_fst[8323,4] <- 0.00000001
+Observed_perloc_fst[9235,4] <- 0.00000001
+Observed_perloc_fst[9414,4] <- 0.00000001
+Observed_perloc_fst[10806,4] <- 0.00000001
+Observed_perloc_fst[12670,4] <- 0.00000001
+Observed_perloc_fst[13445,4] <- 0.00000001
+Observed_perloc_fst[14790,4] <- 0.00000001
+Observed_perloc_fst[14799,4] <- 0.00000001
+Observed_perloc_fst[18761,4] <- 0.00000001
+
 # Adjust P values for multiple comparisons:
 
 adjust_fdr = p.adjust(Observed_perloc_fst[,4], method = "fdr", n = length(Observed_perloc_fst[,1]))
@@ -119,6 +133,10 @@ Observed_perloc_fst <- cbind.data.frame(Observed_perloc_fst, adjust_fdr, adjust_
 head(Observed_perloc_fst)
 
 subset(Observed_perloc_fst, Observed_perloc_fst$adjust_fdr <= 0.01)
+
+library(readr)
+
+write_tsv(Observed_perloc_fst, "Observed_perloc_fst.tsv", quote = "none")
 
 
 #Write the outlier SNPs to a file. Not run.
@@ -134,20 +152,28 @@ PerLocFst <- ggplot(tan.bs$perloc, aes(x=Fst)) +
   xlab("Site-wise Weir and Cockerham Fst")+
   theme_bw()+
   ggtitle("Observed Site-wise Fst")+
-  geom_vline(xintercept = as.numeric(tan.bs$overall[7]), color = "red")
+  geom_vline(xintercept = as.numeric(tan.bs$overall[7]), color = "red")+
+  theme(text = element_text(size = 15))
 
 PerLocFst
 
-#Per Locus Fis Plot:
-PerLocFis <- ggplot(tan.bs$perloc, aes(x=Fis)) + 
-  geom_histogram(color="blue", fill="lightblue", binwidth=0.02)+
-  ylab("Number of Sites")+
-  xlab("Site-wise Weir and Cockerham Fis")+
-  theme_bw()+
-  ggtitle("Observed Site-wise Fis")+
-  geom_vline(xintercept = as.numeric(tan.bs$overall[9]), color = "red")
+# Site wise Fst Manhattan plot:
 
-PerLocFis
+man_sites <- read_tsv("Observed_perloc_fst.tsv", col_names = T)
+
+ggplot(man_sites, aes(POS, log_P_bonf))+
+  geom_point()+
+  geom_hline(yintercept = -log(0.05))+
+  facet_wrap(vars(`CHROM`))+
+  ggtitle("Genome Wide Fst Manhattan Plot")+
+  ylab("-log(Bonferroni Adjusted P-value)")+
+  xlab("Genomic Position")+
+  theme_bw()+
+  theme(text = element_text(size = 15))+
+  theme(axis.text.x=element_blank())
+  
+
+subset(man_sites, man_sites$log_P_bonf > 0)        
 
 
 #Overall Genetic Distance as table:
@@ -158,11 +184,21 @@ tan.gendist <- genet.dist(Tan_LDprune.genid)
 
 tan.gendist <- melt(as.matrix(tan.gendist))
 
-tan.gendist
+test.df <- as.data.frame(tan.gendist)
 
-gendist <- ggplot(tan.gendist, aes(Var1, Var2)) + # x and y axes => Var1 and Var2
-  geom_tile(aes(fill = value)) + # background colours are mapped according to the value column
-  geom_text(aes(fill = tan.gendist$value, label = round(tan.gendist$value, 3))) +
+test.df$index<- c(5,4,6,2,1,3,8,7,9)
+
+tan.gendist <- test.df[order(test.df$index),]
+
+library(readr)
+write_tsv(tan.gendist, "fixed.gendist.tsv")
+
+fixed <- read.table("fixed.gendist.tsv", header = T)
+fixed
+
+ggplot(fixed, aes(Var2, Var1)) + # x and y axes => Var1 and Var2
+  geom_tile(aes(fill = value)) + # background colors are mapped according to the value column
+  geom_text(aes(fill = value, label = round(value, 3)))+
   scale_fill_gradient(low = "lightblue", high = "darkslategray") + 
   theme(panel.grid.major.x=element_blank(), 
         panel.grid.minor.x=element_blank(), 
@@ -172,9 +208,6 @@ gendist <- ggplot(tan.gendist, aes(Var1, Var2)) + # x and y axes => Var1 and Var
         axis.text.x = element_text(angle=90, hjust = 1,vjust=1,size = 12,face = "bold"), 
         plot.title = element_text(size=20,face="bold"),
         axis.text.y = element_text(size = 12,face = "bold")) + 
-  ggtitle("Pairwise Genetic Distance") + theme(legend.title=element_text(face="bold", size=14)) + scale_y_discrete(name="") + 
+  ggtitle("Pairwise Genetic Distance") + theme(legend.title=element_text(face="bold", size=14))+ scale_y_discrete(name="") + 
   scale_x_discrete(name="") + labs(fill="Chord Dist.")
-
-gendist
-
 
