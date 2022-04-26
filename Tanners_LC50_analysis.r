@@ -57,7 +57,9 @@ ggplot(frame, aes(x = POP, y = LC_50s))+
   ylab(bquote(''~LC[50]~' (mg/L'~Cl^-1~')'))+
   xlab("Temporal subpopulation")+
   ggtitle(bquote('Population Specific '~LC[50]~ 'Estimates'))+
-  theme_light()
+  theme_light()+
+  theme(text = element_text(size = 15))
+
 
 # Run anova:
 #check Levels
